@@ -1,0 +1,388 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Tomato Dial</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@500;700&family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: a single centered column. A raised round dial is the hero, a segmented mode switch sits above it, and pressable round buttons sit below it. */
+:root {
+  --bg: #E7EDE6;
+  --surface: #F4F7F2;
+  --ink: #1C2A21;
+  --muted: #5C6B60;
+  --line: #C5D1C4;
+  --track: #DDE5DB;
+  --edge: #BCC9BB;
+  --hi: rgba(255, 255, 255, 0.75);
+  --shadow: rgba(28, 42, 33, 0.28);
+  --tomato: #D93F34;
+  --mint: #238A62;
+  --sky: #2F7FB0;
+  --on-mode: #FFFFFF;
+  --mode: var(--tomato);
+  --font-display: "Bricolage Grotesque", "Avenir Next", system-ui, sans-serif;
+  --font-body: "DM Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "DM Mono", ui-monospace, "SF Mono", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0F1712; --surface: #1A271F; --ink: #E8F0EA; --muted: #97A99C; --line: #2F4034;
+    --track: #111B15; --edge: #0A100C; --hi: rgba(255, 255, 255, 0.07); --shadow: rgba(0, 0, 0, 0.6);
+    --tomato: #FF6F61; --mint: #4CC79A; --sky: #6CB6E6; --on-mode: #12100F; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0F1712; --surface: #1A271F; --ink: #E8F0EA; --muted: #97A99C; --line: #2F4034;
+  --track: #111B15; --edge: #0A100C; --hi: rgba(255, 255, 255, 0.07); --shadow: rgba(0, 0, 0, 0.6);
+  --tomato: #FF6F61; --mint: #4CC79A; --sky: #6CB6E6; --on-mode: #12100F; color-scheme: dark;
+}
+:root[data-mode="focus"] { --mode: var(--tomato); }
+:root[data-mode="short"] { --mode: var(--mint); }
+:root[data-mode="long"] { --mode: var(--sky); }
+
+* { box-sizing: border-box; }
+body {
+  background-color: var(--bg);
+  background-image: radial-gradient(ellipse 80% 50% at 50% -8%, color-mix(in srgb, var(--mode) 24%, transparent), transparent 70%);
+  background-repeat: no-repeat;
+  color: var(--ink); font-family: var(--font-body); font-size: 15px; line-height: 1.5;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 22px 56px;
+  transition: background-color 0.4s;
+}
+button, input { font: inherit; color: inherit; }
+button { cursor: pointer; -webkit-tap-highlight-color: transparent; }
+:focus-visible { outline: 3px solid color-mix(in srgb, var(--mode) 70%, transparent); outline-offset: 3px; }
+
+.app { max-width: 440px; margin: 0 auto; display: grid; gap: 26px; justify-items: stretch; }
+.head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.brand { display: flex; align-items: center; gap: 9px; font-family: var(--font-display); font-weight: 700; font-size: 1.15rem; letter-spacing: 0.01em; }
+.brand svg { width: 26px; height: 26px; display: block; }
+.today { font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); text-align: right; }
+
+/* Mode switch */
+.seg { position: relative; display: grid; grid-template-columns: repeat(3, 1fr); padding: 4px; border-radius: 999px; background: var(--track); box-shadow: inset 0 2px 5px var(--shadow); }
+.seg .thumb { position: absolute; top: 4px; bottom: 4px; left: 4px; width: calc((100% - 8px) / 3); border-radius: 999px; background: var(--surface);
+  box-shadow: 0 3px 0 var(--edge), 0 6px 12px -4px var(--shadow), inset 0 1px 0 var(--hi);
+  transform: translateX(calc(var(--i, 0) * 100%)); transition: transform 0.35s cubic-bezier(0.3, 1.3, 0.5, 1); }
+.seg button { position: relative; z-index: 1; border: 0; background: none; padding: 10px 4px; border-radius: 999px; font-family: var(--font-display); font-weight: 500; font-size: 0.86rem; color: var(--muted); transition: color 0.2s; min-width: 0; }
+.seg button[aria-pressed="true"] { color: var(--ink); font-weight: 700; }
+
+/* Dial */
+.dial-wrap { display: grid; justify-items: center; }
+.dial { position: relative; width: min(88vw, 360px); aspect-ratio: 1; max-width: 100%; border-radius: 50%; background: var(--surface); container-type: inline-size;
+  box-shadow: 0 12px 0 var(--edge), 0 34px 44px -20px var(--shadow), inset 0 3px 0 var(--hi); margin-bottom: 12px; }
+.dial svg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.track { fill: none; stroke: var(--track); stroke-width: 10; }
+.arc { fill: none; stroke: var(--mode); stroke-width: 10; stroke-linecap: round; }
+.knob { fill: var(--surface); stroke: var(--mode); stroke-width: 4.5; }
+.face { position: absolute; inset: 0; display: grid; align-content: center; justify-items: center; gap: 2px; text-align: center; }
+.mode-label { display: inline-flex; align-items: center; gap: 8px; font-family: var(--font-display); font-weight: 700; font-size: 0.8rem; letter-spacing: 0.16em; text-transform: uppercase; color: var(--muted); }
+.mode-label i { width: 9px; height: 9px; border-radius: 50%; background: var(--mode); display: block; }
+.time { font-family: var(--font-mono); font-weight: 500; font-size: 3.2rem; font-size: 17.5cqw; line-height: 1.05; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.status { font-size: 0.82rem; color: var(--muted); min-height: 1.3em; }
+.dial.done { animation: pulse 0.9s ease-out; }
+@keyframes pulse { 0% { transform: scale(1); } 25% { transform: scale(1.035); } 100% { transform: scale(1); } }
+
+/* Controls */
+.controls { display: flex; align-items: flex-start; justify-content: center; gap: clamp(18px, 7vw, 34px); padding-top: 4px; }
+.ctl { display: grid; justify-items: center; gap: 12px; }
+.ctl span { font-size: 0.78rem; font-weight: 500; color: var(--muted); }
+.btn { border: 0; display: grid; place-items: center; border-radius: 50%; transition: transform 0.08s, box-shadow 0.08s; }
+.btn svg { width: 46%; height: 46%; display: block; }
+.btn.round { width: 64px; height: 64px; margin-top: 16px; background: var(--surface); color: var(--ink);
+  box-shadow: 0 6px 0 var(--edge), 0 14px 18px -8px var(--shadow), inset 0 2px 0 var(--hi); }
+.btn.main { width: 96px; height: 96px; background: var(--mode); color: var(--on-mode);
+  --mode-edge: color-mix(in srgb, var(--mode) 58%, #000);
+  box-shadow: 0 8px 0 var(--mode-edge), 0 20px 26px -10px color-mix(in srgb, var(--mode) 70%, #000), inset 0 3px 0 rgba(255, 255, 255, 0.35); }
+.btn.main svg { width: 40%; height: 40%; }
+.btn.round:active { transform: translateY(5px); box-shadow: 0 1px 0 var(--edge), 0 5px 8px -6px var(--shadow), inset 0 2px 0 var(--hi); }
+.btn.main:active { transform: translateY(7px); box-shadow: 0 1px 0 var(--mode-edge), 0 6px 10px -6px color-mix(in srgb, var(--mode) 70%, #000), inset 0 3px 0 rgba(255, 255, 255, 0.35); }
+
+/* Session dots and focus note */
+.progress { display: grid; gap: 14px; justify-items: center; }
+.dots { display: flex; gap: 10px; }
+.dots i { width: 14px; height: 14px; border-radius: 50%; background: var(--track); box-shadow: inset 0 2px 3px var(--shadow); transition: background 0.3s, box-shadow 0.3s, transform 0.3s; display: block; }
+.dots i.on { background: var(--tomato); box-shadow: 0 2px 0 color-mix(in srgb, var(--tomato) 55%, #000); transform: translateY(-1px); }
+.count { font-size: 0.82rem; color: var(--muted); }
+.note { width: 100%; max-width: 320px; text-align: center; background: none; border: 0; border-bottom: 2px dashed var(--line); padding: 8px 4px; font-size: 1rem; border-radius: 0; }
+.note::placeholder { color: var(--muted); opacity: 0.8; }
+.note:focus { outline: none; border-bottom-color: var(--mode); border-bottom-style: solid; }
+
+/* Settings */
+details.settings { background: var(--surface); border-radius: 18px; padding: 4px 16px; box-shadow: 0 5px 0 var(--edge), 0 14px 20px -12px var(--shadow), inset 0 2px 0 var(--hi); }
+details.settings summary { list-style: none; cursor: pointer; padding: 12px 0; font-family: var(--font-display); font-weight: 700; display: flex; justify-content: space-between; align-items: center; }
+details.settings summary::-webkit-details-marker { display: none; }
+details.settings summary::after { content: "+"; font-family: var(--font-mono); color: var(--muted); font-size: 1.2rem; }
+details.settings[open] summary::after { content: "–"; }
+.set-grid { display: grid; gap: 14px; padding: 2px 0 16px; }
+.mins { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.mins label { display: grid; gap: 6px; font-size: 0.78rem; color: var(--muted); font-weight: 500; }
+.mins input { width: 100%; min-width: 0; text-align: center; font-family: var(--font-mono); font-size: 1.05rem; padding: 9px 4px; border: 0; border-radius: 12px; background: var(--track); box-shadow: inset 0 2px 4px var(--shadow); }
+.sw { display: flex; justify-content: space-between; align-items: center; gap: 12px; font-size: 0.92rem; }
+.sw input { appearance: none; -webkit-appearance: none; flex: none; width: 46px; height: 26px; border-radius: 999px; background: var(--track); box-shadow: inset 0 2px 4px var(--shadow); position: relative; cursor: pointer; transition: background 0.2s; margin: 0; }
+.sw input::before { content: ""; position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; border-radius: 50%; background: var(--surface); box-shadow: 0 2px 0 var(--edge); transition: transform 0.2s; }
+.sw input:checked { background: var(--mode); }
+.sw input:checked::before { transform: translateX(20px); }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition: none !important; animation: none !important; }
+}
+</style>
+
+<div class="app">
+  <header class="head">
+    <div class="brand">
+      <svg viewBox="0 0 32 32" aria-hidden="true">
+        <circle cx="16" cy="18.5" r="11" fill="var(--tomato)"/>
+        <path d="M16 8.5c-1.6-2.2-4.2-2.6-6.2-1.8 1.1 1.4 2.6 2.1 4.4 2.2-1.9.2-3.4 1.2-4.2 2.7 2.1-.1 3.8-.8 5-2zM16 8.5c1.6-2.2 4.2-2.6 6.2-1.8-1.1 1.4-2.6 2.1-4.4 2.2 1.9.2 3.4 1.2 4.2 2.7-2.1-.1-3.8-.8-5-2z" fill="var(--mint)"/>
+        <path d="M16 9V4.5" stroke="var(--mint)" stroke-width="2" stroke-linecap="round"/>
+      </svg>
+      Tomato Dial
+    </div>
+    <div class="today" id="today"></div>
+  </header>
+
+  <div class="seg" id="seg" role="group" aria-label="Timer mode">
+    <span class="thumb" aria-hidden="true"></span>
+    <button type="button" data-mode="focus" aria-pressed="true">Focus</button>
+    <button type="button" data-mode="short" aria-pressed="false">Short break</button>
+    <button type="button" data-mode="long" aria-pressed="false">Long break</button>
+  </div>
+
+  <div class="dial-wrap">
+    <div class="dial" id="dial">
+      <svg viewBox="0 0 320 320" aria-hidden="true">
+        <g id="ticks"></g>
+        <circle class="track" cx="160" cy="160" r="140"/>
+        <circle class="arc" id="arc" cx="160" cy="160" r="140" transform="rotate(-90 160 160)"/>
+        <g id="knob-g" transform="rotate(0 160 160)"><circle class="knob" cx="160" cy="20" r="9"/></g>
+      </svg>
+      <div class="face">
+        <div class="mode-label"><i></i><span id="mode-label">Focus</span></div>
+        <div class="time" id="time" role="timer" aria-live="off">25:00</div>
+        <div class="status" id="status">Ready</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="controls">
+    <div class="ctl">
+      <button class="btn round" id="reset" type="button" aria-label="Reset timer">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12a8 8 0 1 0 2.6-5.9"/><path d="M4 4v5h5"/></svg>
+      </button>
+      <span>Reset</span>
+    </div>
+    <div class="ctl">
+      <button class="btn main" id="main" type="button" aria-label="Start timer"></button>
+      <span id="main-label">Start</span>
+    </div>
+    <div class="ctl">
+      <button class="btn round" id="skip" type="button" aria-label="Skip to next">
+        <svg viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"><path d="M6 5l10 7-10 7z"/><path d="M19 5v14" fill="none" stroke-width="2.6"/></svg>
+      </button>
+      <span>Skip</span>
+    </div>
+  </div>
+
+  <div class="progress">
+    <div class="dots" id="dots" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+    <p class="count" id="count">No focus sessions yet today</p>
+    <input class="note" id="note" type="text" maxlength="60" placeholder="What are you focusing on?" autocomplete="off" aria-label="What are you focusing on?">
+  </div>
+
+  <details class="settings">
+    <summary>Settings</summary>
+    <div class="set-grid">
+      <div class="mins">
+        <label for="d-focus">Focus (min)<input id="d-focus" type="number" min="1" max="120" inputmode="numeric" value="25"></label>
+        <label for="d-short">Short break<input id="d-short" type="number" min="1" max="120" inputmode="numeric" value="5"></label>
+        <label for="d-long">Long break<input id="d-long" type="number" min="1" max="120" inputmode="numeric" value="15"></label>
+      </div>
+      <label class="sw" for="s-auto"><span>Start the next timer automatically</span><input id="s-auto" type="checkbox"></label>
+      <label class="sw" for="s-sound"><span>Play a chime when time is up</span><input id="s-sound" type="checkbox" checked></label>
+    </div>
+  </details>
+</div>
+
+<script>
+(function () {
+  var KEY = 'tomato-dial-v1';
+  var NAMES = { focus: 'Focus', short: 'Short break', long: 'Long break' };
+  var ORDER = ['focus', 'short', 'long'];
+  var R = 140, C = 2 * Math.PI * R;
+  var ICON_PLAY = '<svg viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M7 4.5l13 7.5-13 7.5z"/></svg>';
+  var ICON_PAUSE = '<svg viewBox="0 0 24 24" fill="currentColor"><rect x="5" y="4" width="5" height="16" rx="1.6"/><rect x="14" y="4" width="5" height="16" rx="1.6"/></svg>';
+
+  function todayStr() { var d = new Date(); return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); }
+  function pad(n) { return (n < 10 ? '0' : '') + n; }
+
+  var S = { mode: 'focus', dur: { focus: 25, short: 5, long: 15 }, auto: false, sound: true, task: '', date: todayStr(), sessions: 0, cycle: 0 };
+  var running = false, endAt = 0, remaining = 0, timer = null, wake = null, audio = null;
+
+  function load() {
+    try {
+      var raw = localStorage.getItem(KEY);
+      if (!raw) return;
+      var s = JSON.parse(raw);
+      if (s.dur) S.dur = { focus: +s.dur.focus || 25, short: +s.dur.short || 5, long: +s.dur.long || 15 };
+      S.auto = !!s.auto; S.sound = s.sound !== false; S.task = typeof s.task === 'string' ? s.task : '';
+      if (s.date === S.date) { S.sessions = +s.sessions || 0; S.cycle = +s.cycle || 0; }
+    } catch (e) {}
+  }
+  function save() { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} }
+
+  function total() { return S.dur[S.mode] * 60000; }
+  function fmt(ms) { var s = Math.ceil(ms / 1000); return pad(Math.floor(s / 60)) + ':' + pad(s % 60); }
+
+  var el = {
+    time: document.getElementById('time'), status: document.getElementById('status'), modeLabel: document.getElementById('mode-label'),
+    arc: document.getElementById('arc'), knob: document.getElementById('knob-g'), main: document.getElementById('main'),
+    mainLabel: document.getElementById('main-label'), seg: document.getElementById('seg'), dots: document.getElementById('dots').children,
+    count: document.getElementById('count'), dial: document.getElementById('dial'), note: document.getElementById('note')
+  };
+
+  /* ticks */
+  (function () {
+    var g = document.getElementById('ticks'), out = '';
+    for (var i = 0; i < 60; i++) {
+      var a = i * 6 * Math.PI / 180, big = i % 5 === 0, r1 = 118, r2 = big ? 100 : 109;
+      var x1 = 160 + r1 * Math.sin(a), y1 = 160 - r1 * Math.cos(a), x2 = 160 + r2 * Math.sin(a), y2 = 160 - r2 * Math.cos(a);
+      out += '<line x1="' + x1.toFixed(2) + '" y1="' + y1.toFixed(2) + '" x2="' + x2.toFixed(2) + '" y2="' + y2.toFixed(2) + '" stroke="' + (big ? 'var(--muted)' : 'var(--line)') + '" stroke-width="' + (big ? 2.4 : 1.8) + '" stroke-linecap="round"/>';
+    }
+    g.innerHTML = out;
+  })();
+
+  el.arc.setAttribute('stroke-dasharray', C.toFixed(2));
+  load();
+
+  function render() {
+    var t = total(), elapsed = t > 0 ? 1 - remaining / t : 0;
+    if (elapsed < 0) elapsed = 0; if (elapsed > 1) elapsed = 1;
+    el.time.textContent = fmt(remaining);
+    el.arc.setAttribute('stroke-dashoffset', (C * (1 - elapsed)).toFixed(2));
+    el.arc.style.opacity = elapsed < 0.003 ? 0 : 1;
+    el.knob.setAttribute('transform', 'rotate(' + (elapsed * 360).toFixed(2) + ' 160 160)');
+    document.documentElement.setAttribute('data-mode', S.mode);
+    el.modeLabel.textContent = NAMES[S.mode];
+
+    var idx = ORDER.indexOf(S.mode);
+    el.seg.style.setProperty('--i', idx);
+    var btns = el.seg.querySelectorAll('button');
+    for (var i = 0; i < btns.length; i++) btns[i].setAttribute('aria-pressed', btns[i].getAttribute('data-mode') === S.mode ? 'true' : 'false');
+
+    var started = remaining < t;
+    el.status.textContent = running ? (S.mode === 'focus' ? 'Stay with it' : 'Rest your eyes') : (started ? 'Paused' : 'Ready');
+    el.main.innerHTML = running ? ICON_PAUSE : ICON_PLAY;
+    var label = running ? 'Pause' : (started ? 'Resume' : 'Start');
+    el.mainLabel.textContent = label;
+    el.main.setAttribute('aria-label', label + ' timer');
+
+    for (var d = 0; d < 4; d++) el.dots[d].className = d < Math.min(S.cycle, 4) ? 'on' : '';
+    el.count.textContent = S.sessions === 0 ? 'No focus sessions yet today' : S.sessions + (S.sessions === 1 ? ' focus session' : ' focus sessions') + ' today';
+    try { document.title = running ? fmt(remaining) + ' · Tomato Dial' : 'Tomato Dial'; } catch (e) {}
+  }
+
+  /* sound */
+  function prime() {
+    try {
+      if (!audio) audio = new (window.AudioContext || window.webkitAudioContext)();
+      if (audio.state === 'suspended') audio.resume();
+    } catch (e) {}
+  }
+  function chime() {
+    if (!S.sound || !audio) return;
+    try {
+      [660, 880, 1175].forEach(function (f, i) {
+        var o = audio.createOscillator(), g = audio.createGain(), t0 = audio.currentTime + i * 0.22;
+        o.type = 'sine'; o.frequency.value = f;
+        g.gain.setValueAtTime(0.0001, t0);
+        g.gain.exponentialRampToValueAtTime(0.22, t0 + 0.03);
+        g.gain.exponentialRampToValueAtTime(0.0001, t0 + 1.2);
+        o.connect(g); g.connect(audio.destination); o.start(t0); o.stop(t0 + 1.3);
+      });
+    } catch (e) {}
+  }
+
+  function lockScreen() {
+    try { if (navigator.wakeLock && !wake) navigator.wakeLock.request('screen').then(function (l) { wake = l; l.addEventListener('release', function () { wake = null; }); }).catch(function () {}); } catch (e) {}
+  }
+  function unlockScreen() { try { if (wake) { wake.release(); wake = null; } } catch (e) {} }
+
+  function start() {
+    prime();
+    if (remaining <= 0) remaining = total();
+    running = true; endAt = Date.now() + remaining;
+    clearInterval(timer); timer = setInterval(tick, 100);
+    lockScreen(); render();
+  }
+  function pause() {
+    if (running) remaining = Math.max(0, endAt - Date.now());
+    running = false; clearInterval(timer); unlockScreen(); render();
+  }
+  function setMode(m, go) {
+    running = false; clearInterval(timer); unlockScreen();
+    S.mode = m; remaining = total(); render();
+    if (go) start();
+  }
+  function tick() {
+    remaining = endAt - Date.now();
+    if (remaining <= 0) { remaining = 0; complete(); return; }
+    render();
+  }
+  function complete() {
+    running = false; clearInterval(timer); unlockScreen();
+    chime();
+    var next;
+    if (S.mode === 'focus') {
+      S.sessions++; S.cycle++;
+      next = S.cycle >= 4 ? 'long' : 'short';
+    } else {
+      if (S.mode === 'long') S.cycle = 0;
+      next = 'focus';
+    }
+    save();
+    el.dial.classList.remove('done'); void el.dial.offsetWidth; el.dial.classList.add('done');
+    setMode(next, S.auto);
+  }
+
+  el.main.addEventListener('click', function () { if (running) pause(); else start(); });
+  document.getElementById('reset').addEventListener('click', function () { running = false; clearInterval(timer); unlockScreen(); remaining = total(); render(); });
+  document.getElementById('skip').addEventListener('click', function () {
+    var next = S.mode === 'focus' ? 'short' : 'focus';
+    if (S.mode === 'long') S.cycle = 0;
+    save(); setMode(next, false);
+  });
+  el.seg.addEventListener('click', function (e) {
+    var b = e.target.closest('button[data-mode]');
+    if (b) setMode(b.getAttribute('data-mode'), false);
+  });
+
+  /* settings */
+  ['focus', 'short', 'long'].forEach(function (k) {
+    var inp = document.getElementById('d-' + k);
+    inp.value = S.dur[k];
+    inp.addEventListener('change', function () {
+      var v = parseInt(inp.value, 10);
+      if (!(v >= 1)) v = S.dur[k];
+      v = Math.min(120, v); inp.value = v; S.dur[k] = v;
+      if (!running && S.mode === k) remaining = total();
+      save(); render();
+    });
+  });
+  var auto = document.getElementById('s-auto'), snd = document.getElementById('s-sound');
+  auto.checked = S.auto; snd.checked = S.sound;
+  auto.addEventListener('change', function () { S.auto = auto.checked; save(); });
+  snd.addEventListener('change', function () { S.sound = snd.checked; save(); if (S.sound) { prime(); } });
+  el.note.value = S.task;
+  el.note.addEventListener('input', function () { S.task = el.note.value; save(); });
+
+  document.addEventListener('visibilitychange', function () { if (!document.hidden && running) tick(); });
+
+  document.getElementById('today').textContent = new Date().toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' });
+  remaining = total();
+  render();
+})();
+</script>
+
+</body></html>
